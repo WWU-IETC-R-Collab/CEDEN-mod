@@ -42,6 +42,10 @@ The goals of this modification are to:
 
 The output of this R code can be found in `Upper San Francisco Project\Data & Analyses` and is named: CEDEN_Modified_<datecreated>
 
+Remaining Questions:
+
+*  What projection are CEDEN data in? Only some tables have Datum given but never projection information.
+
 ## CEDEN Data Cleaning {.tabset .tabset-fade}
 
 ### CEDEN Benthic
@@ -83,7 +87,7 @@ Habitat data was spatially queried within the project area using the `sf` packag
 
 ```{r}
 # Convert joined habitat tables to sf
-CEDEN.habitat.sf <- st_as_sf(CEDEN.habitat,
+CEDEN.habitat.sf <- st_as_sf(CEDEN.toxicity,
                              coords = c("Longitude", "Latitude"), 
                              remove = F, # Keep original coordinate columns
                              crs = "WGS84") %>% # Assumed WGS84 Datum, not given in data
@@ -108,11 +112,11 @@ ggplot() +
 
 ```{r}
 # Central Valley Data
-CEDEN.tissue.CV <- fread("Data/CV_Tissue_202012911342.txt") %>%
+CEDEN.tissue.CV <- fread("Data/CV_Tissue_202012911371.txt") %>%
   setNames(make.unique(names(.))) %>% # Duplicate 'mm' columns need unique names in order to process, remove
   rename_all(funs(stringr::str_replace_all(., 'Composite', ''))) %>% # Remove 'Composite' from column names
   select(any_of(CEDEN.selectList)) %>%
-  mutate(Date = as_date(ymd(Date))) # Format date to conform to SFB Table
+  mutate(Date = mdy(Date)) # Format date to conform to SFB Table
 
 # San Francisco Bay Data
 CEDEN.tissue.SFB <- fread("Data/SFB_Tissue_202012910151.txt") %>%
@@ -126,11 +130,11 @@ CEDEN.tissue <- full_join(CEDEN.tissue.CV, CEDEN.tissue.SFB) %>%
   mutate(Date = as_date(Date))
 ```
 
-#### Toxicity Spatial Query
+#### Tissue Spatial Query
 
 ```{r}
 # Convert joined habitat tables to sf
-CEDEN.habitat.sf <- st_as_sf(CEDEN.habitat,
+CEDEN.tissue.sf <- st_as_sf(CEDEN.tissue,
                              coords = c("Longitude", "Latitude"), 
                              remove = F, # Keep original coordinate columns
                              crs = "WGS84") %>% # Assumed WGS84 Datum, not given in data
@@ -158,10 +162,23 @@ CEDEN.toxicity.SFB <- fread("Data/SFB_Toxicity_202012910139.txt") %>%
 # CV + SFB Data
 CEDEN.toxicity <- full_join(CEDEN.toxicity.CV, CEDEN.toxicity.SFB) %>%
   mutate(Date = as_date(Date))
-CEDEN.toxicity <- CEDEN.toxicity[,c(8,3,1,2,15,11,9,10,4,14,3,16,17,12,13)] # reorder columns; easier/more consistent way to do this with dplyr::relocate?
+CEDEN.toxicity <- CEDEN.toxicity[,c(8,3,1,2,15,11,9,10,4,14,3,16,17,5,6,7,12,13)] # reorder columns; easier/more consistent way to do this with dplyr::relocate?
 
-tibble(1:length(names(CEDEN.toxicity)), names(CEDEN.toxicity))
+# tibble(1:length(names(CEDEN.toxicity)), names(CEDEN.toxicity)) # tibble to show column order and index number to help reorder
 ```
+
+#### Spatial Query
+
+```{r}
+# Convert joined habitat tables to sf
+CEDEN.toxicity.sf <- st_as_sf(CEDEN.habitat,
+                             coords = c("Longitude", "Latitude"), 
+                             remove = F, # Keep original coordinate columns
+                             crs = "WGS84") %>% # Assumed WGS84 Datum, not given in data
+  st_join(USFE.regions[1], left = T) %>%
+  filter(!is.na(Subregion))
+```
+
 
 ### CEDEN Water Qauality
 
@@ -199,9 +216,14 @@ ggplot() +
   geom_sf(data = USFE.regions) +
   geom_sf(data = CEDEN.WQ.sf, color = "orange")
 ```
-
+#### Final Toxicity Data
 
 ```{r}
+
+```
+
+
+```{r include = F}
 # Author: Steven Eikenbary
 #############
 # R code for combining CEDEN and SURF data based on common columns

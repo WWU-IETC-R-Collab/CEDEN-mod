@@ -1,0 +1,38 @@
+---
+title: "CEDEN Query"
+author: "Skyler Elmstrom"
+date: "1/31/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This R package is currently unavailable without an authenticated user account.
+
+The California Water Board hosts a GitHub repository covering the use of an R package and API to acces the CEDEN database:
+https://github.com/CAWaterBoardDataCenter/cedenTools
+
+The full documentation can be found here:
+https://github.com/CAWaterBoardDataCenter/cedenTools/blob/master/CEDEN%20Web%20Services%20-%20External%20Web%20Services%20Users%20Guide%20-%200.4.docx
+
+```{r}
+install.packages('devtools')
+devtools::install_github('daltare/cedenTools')
+library(cedenTools)
+```
+
+I used the `cedenTools` package to retrieve water quality data from October 2009 - December 2019. We need data with the following parameters:
+
+*  regionalBoard: 5S (Central Valley), 2 (San Francisco Bay)
+*  
+
+```{r}
+data.download <- ceden_query(service = 'cedenwaterqualityMonitoringStationsList',
+                             query_parameters = '"filter":[{"regionalBoard":"5S","sampleDateMin":"10/1/2009","sampleDateMax":"12/31/2019"}]',
+                             base_URI = 'cedenwebservices.waterboards.ca.gov')
+
+CEDENBenthicMonitoringStationsList
+```
+
