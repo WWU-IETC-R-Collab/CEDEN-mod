@@ -66,9 +66,6 @@ Remaining Questions:
 `data.table`'s `fread()` function was used to quickly read the large source text files. Some cleaning was necessary to remove rows with no spatial information. `dplyr` selections were then made to reduce the number of columns in the output data.
 
 ```{r}
-CEDEN.selectList <-
-  c("Analyte", "Result", "VariableResult", "StationCode", "LocationCode", "MDL", "Date"="SampleDate", "Latitude"="TargetLatitude", "Longitude"="TargetLongitude", "CollectionMethod"="CollectionMethodName", "Unit", "Datum", "regional_board", "rb_number" )
-
 # Central Valley Data
 CEDEN.habitat.CV <- fread("Data/CV_Habitat_202012911411.txt") %>%
   filter(!TargetLatitude == 'NULL') %>% # remove character NULLs

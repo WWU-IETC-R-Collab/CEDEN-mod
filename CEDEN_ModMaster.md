@@ -64,9 +64,6 @@ Remaining Questions:
 
 
 ```r
-CEDEN.selectList <-
-  c("Analyte", "Result", "VariableResult", "StationCode", "LocationCode", "MDL", "Date"="SampleDate", "Latitude"="TargetLatitude", "Longitude"="TargetLongitude", "CollectionMethod"="CollectionMethodName", "Unit", "Datum", "regional_board", "rb_number" )
-
 # Central Valley Data
 CEDEN.habitat.CV <- fread("Data/CV_Habitat_202012911411.txt") %>%
   filter(!TargetLatitude == 'NULL') %>% # remove character NULLs
