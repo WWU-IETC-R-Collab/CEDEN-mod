@@ -10,7 +10,7 @@ output:
 
 
 
-This markdown document covers the modifications CEDEN data tables to create a "modified" data set for general use.
+This markdown document covers the modifications of CEDEN data tables to create a "modified" data set for general use.
 
 The "original" data set consists of all unmodified CEDEN tables (BENTHIC, HABITAT, TISSUE, TOXICITY, WATERQUALITY) from the Central Valley and San Francisco Bay regions and are spatially queried to the USFE project area. This original data set can be found within the IETC Tox Box at: `Upper San Francisco Project\Data & Analyses\Original\CEDEN`
 
