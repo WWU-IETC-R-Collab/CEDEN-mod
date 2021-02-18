@@ -37,7 +37,7 @@ USFE.regions <- st_read("Data/RiskRegions_DWSC_Update_9292020.shp") %>%
 
 # Create Column Selection List
 CEDEN.selectList <-
-  c("ID", "Analyte", "Result", "OrganismName", "Project", "ParentProject", "Program", "VariableResult", "MatrixName", "StationCode", "LocationCode", "MDL", "CommonName", "TissueName", "Date"="SampleDate", "Latitude"="TargetLatitude", "Longitude"="TargetLongitude", "CollectionMethod"="CollectionMethodName", "Unit", "Datum", "regional_board", "rb_number", "Phylum", "Class", "Orders", "Family", "Genus", "Species", "Counts", "BAResult")
+  c("ID", "Analyte", "Result", "OrganismName", "Project", "ParentProject", "Program", "VariableResult", "MatrixName", "StationName", "StationCode", "LocationCode", "MDL", "CommonName", "TissueName", "Date"="SampleDate", "Latitude"="TargetLatitude", "Longitude"="TargetLongitude", "CollectionMethod"="CollectionMethodName", "Unit", "Datum", "regional_board", "rb_number", "Phylum", "Class", "Orders", "Family", "Genus", "Species", "Counts", "BAResult")
 ```
 
 <br>
@@ -73,7 +73,7 @@ CEDEN benthic data was used for a separate macroinvertebrate (MI) and water qual
 <br>
 
 #### Cleaning, Joining
-The benthic CEDEN table has coordinate information in 3 different datum and nearly 50% are "Not Recorded" datum values. The NR values were assumed to be NAD83 for now but this needs to be verified. It is important to transform the data to a single datum prior to a spatial query. There are also NULL values within the Latitude and Longitude fields. Rows containing NULL values within a coordinate field were excluded from the data set.
+The benthic CEDEN table has coordinate information in 3 different datum and nearly 50% are "Not Recorded" datum values. The NR values were assumed to be NAD83 for now but this needs to be verified. It is important to transform the data to a single datum prior to spatial queries and analyses. There are also NULL values within the Latitude and Longitude fields. Rows containing NULL values within a coordinate field were excluded from the data set. Some rows have an incorrectly identified Datum (NAD84 is not a Datum) and all belong to the same project (SCVURPPP Creek Status Monitoring in WY2014) from the BASMAA Regional Monitoring Coalition program.
 
 ```{r}
 # Wrangling/Cleaning for MI and WQ analyses by Steven Eikenbary and Eric Lawrence.
@@ -93,7 +93,8 @@ CEDEN.benthic.SFB <- fread("Data/SFB_Benthic_202012910161.txt") %>%
   mutate(Date = as_date(Date))
 
 # CV + SFB Data
-CEDEN.benthic <- full_join(CEDEN.benthic.CV, CEDEN.benthic.SFB)
+CEDEN.benthic <- full_join(CEDEN.benthic.CV, CEDEN.benthic.SFB) %>%
+  filter(between(Date, as_date("2009-10-01"), as_date("2019-09-30")))
 
 ### Split by datum, transform to NAD83, rejoin, update datum column
 
@@ -109,14 +110,15 @@ CEDEN.benthic.NR <- CEDEN.benthic %>%
            remove = F, # Keep original coordinate columns
            crs = "NAD83") # Datum assumed NAD83
 
-CEDEN.benthic.NAD27 <- CEDEN.benthic %>%
-  filter(Datum=='NAD27') %>%
-  st_as_sf(coords = c("Longitude", "Latitude"),
-           remove = F, # Keep original coordinate columns
-           crs = "NAD27") %>%
-  st_transform(., "NAD83") %>%
-  mutate(Latitude = st_coordinates(.)[,2], # permanently convert coordinates to NAD83
-         Longitude = st_coordinates(.)[,1])
+# This section removed after temporal filter
+# CEDEN.benthic.NAD27 <- CEDEN.benthic %>%
+#   filter(Datum=='NAD27') %>%
+#   st_as_sf(coords = c("Longitude", "Latitude"),
+#            remove = F, # Keep original coordinate columns
+#            crs = "NAD27") %>%
+#   st_transform(., "NAD83") %>%
+#   mutate(Latitude = st_coordinates(.)[,2], # permanently convert coordinates to NAD83
+#          Longitude = st_coordinates(.)[,1])
 
 CEDEN.benthic.WGS84 <- CEDEN.benthic %>%
   filter(Datum=="WGS84") %>%
@@ -128,9 +130,11 @@ CEDEN.benthic.WGS84 <- CEDEN.benthic %>%
          Longitude = st_coordinates(.)[,1])
 
 # CEDEN Benthic NAD83
-benthic.list <- list(CEDEN.benthic.NAD83, CEDEN.benthic.NR, CEDEN.benthic.NAD27, CEDEN.benthic.WGS84)
-CEDEN.benthic <- rbindlist(benthic.list)
-CEDEN.benthic$Datum <- "NAD83" # Direct modification; all datum are now NAD83
+benthic.list <- list(CEDEN.benthic.NAD83, CEDEN.benthic.NR, CEDEN.benthic.WGS84)
+CEDEN.benthic <- rbindlist(benthic.list) %>%
+    filter(Datum != "NAD84") # removes odd NAD84 rows until we confirm what coordinate system these data are in
+
+CEDEN.benthic$Datum <- "NAD83" # Direct modification; all datum are now assumed NAD83
 ```
 
 <br>
@@ -142,8 +146,6 @@ CEDEN.benthic$Datum <- "NAD83" # Direct modification; all datum are now NAD83
 CEDEN.benthic.sf <- st_as_sf(CEDEN.benthic) %>%
   st_join(USFE.regions[1], left = T) %>%
   filter(!is.na(Subregion))
-
-benthic.count <- count(CEDEN.benthic.sf$Subregion)
 
 # Map Check
 ggplot() +
@@ -158,7 +160,7 @@ ggplot() +
 A method for reordering columns of the final tables that is relatively easy would be a nice addition here. If we add or subtract columns in CEDENselect.list, this reordering will potentially need to change as well...
 
 ```{r}
-CEDEN.benthic.sf <- CEDEN.benthic.sf[,c('StationCode', 'LocationCode', 'Date', 'Phylum', 'Class', 'Orders', 'Family', 'Genus', 'Species', 'Counts', 'BAResult', 'Unit', 'CollectionMethod', 'Program', 'Project', 'regional_board', 'rb_number', 'Latitude', 'Longitude', 'Datum', 'Subregion', 'geometry')]
+CEDEN.benthic.sf <- CEDEN.benthic.sf[,c('StationName', 'StationCode', 'LocationCode', 'Date', 'Phylum', 'Class', 'Orders', 'Family', 'Genus', 'Species', 'Counts', 'BAResult', 'Unit', 'CollectionMethod', 'Program', 'Project', 'regional_board', 'rb_number', 'Latitude', 'Longitude', 'Datum', 'Subregion', 'geometry')]
 
 # Add CEDEN Matrix Name
 
@@ -189,7 +191,8 @@ CEDEN.habitat.SFB <- fread("Data/SFB_Habitat_202012910166.txt") %>%
 
 # CV + SFB Data
 CEDEN.habitat <- full_join(CEDEN.habitat.CV, CEDEN.habitat.SFB) %>%
-  mutate(Date = as_date(Date))
+  mutate(Date = as_date(Date)) %>%
+  filter(between(Date, as_date("2009-10-01"), as_date("2019-09-30")))
 ```
 
 <br>
@@ -218,8 +221,8 @@ ggplot() +
 #### Final Habitat Data
 
 ```{r}
-CEDEN.habitat.sf$Datum <- "NAD83" # Add datum info
-CEDEN.habitat.sf <- CEDEN.habitat.sf[,c('MatrixName', 'StationCode', 'LocationCode', 'Date', 'Analyte', 'Result', 'VariableResult', 'Unit', 'CollectionMethod',  'Program', 'ParentProject', 'Project', 'regional_board', 'rb_number', 'Latitude', 'Longitude', 'Datum', 'Subregion', 'geometry')]
+CEDEN.habitat.sf$Datum <- "NAD83" # Add assumed NAD83 datum info
+CEDEN.habitat.sf <- CEDEN.habitat.sf[,c('MatrixName', 'StationName', 'StationCode', 'LocationCode', 'Date', 'Analyte', 'Result', 'VariableResult', 'Unit', 'CollectionMethod',  'Program', 'ParentProject', 'Project', 'regional_board', 'rb_number', 'Latitude', 'Longitude', 'Datum', 'Subregion', 'geometry')]
 
 # hab.index <- tibble(1:length(names(CEDEN.habitat.sf)), names(CEDEN.habitat.sf)) # tibble to show column names, order, and index number
 
@@ -251,7 +254,8 @@ CEDEN.tissue.SFB <- fread("Data/SFB_Tissue_202012910151.txt") %>%
 
 # CV + SFB Data
 CEDEN.tissue <- full_join(CEDEN.tissue.CV, CEDEN.tissue.SFB) %>%
-  mutate(Date = as_date(Date))
+  mutate(Date = as_date(Date)) %>%
+  filter(between(Date, as_date("2009-10-01"), as_date("2019-09-30")))
 ```
 
 <br>
@@ -291,7 +295,8 @@ CEDEN.toxicity.SFB <- fread("Data/SFB_Toxicity_202012910139.txt") %>%
 
 # CV + SFB Data
 CEDEN.toxicity <- full_join(CEDEN.toxicity.CV, CEDEN.toxicity.SFB) %>%
-  mutate(Date = as_date(Date))
+  mutate(Date = as_date(Date)) %>%
+  filter(between(Date, as_date("2009-10-01"), as_date("2019-09-30")))
 ```
 
 <br>
@@ -314,7 +319,7 @@ CEDEN.toxicity.sf <- st_as_sf(CEDEN.toxicity,
 
 ```{r}
 CEDEN.toxicity.sf$Datum <- "NAD83" # Add datum info
-CEDEN.toxicity.sf <- CEDEN.toxicity.sf[,c('MatrixName', 'StationCode', 'LocationCode', 'Date', 'Analyte', 'Result', 'Unit', 'OrganismName', 'CollectionMethod',  'Program', 'ParentProject', 'Project', 'regional_board', 'rb_number', 'Latitude', 'Longitude', 'Datum', 'Subregion', 'geometry')]
+CEDEN.toxicity.sf <- CEDEN.toxicity.sf[,c('MatrixName', 'StationName', 'StationCode', 'LocationCode', 'Date', 'Analyte', 'Result', 'Unit', 'OrganismName', 'CollectionMethod',  'Program', 'ParentProject', 'Project', 'regional_board', 'rb_number', 'Latitude', 'Longitude', 'Datum', 'Subregion', 'geometry')]
 
 # tox.index <- tibble(1:length(names(CEDEN.toxicity.sf)), names(CEDEN.toxicity.sf)) # tibble to show column names, order, and index number
 
@@ -343,7 +348,8 @@ CEDEN.WQ.SFB <- fread("Data/SFB_WaterQuality_20201271361.txt") %>%
 
 # CV + SFB Data
 CEDEN.WQ <- full_join(CEDEN.WQ.CV, CEDEN.WQ.SFB) %>%
-  mutate(Date = as_date(Date)) 
+  mutate(Date = as_date(Date)) %>%
+  filter(between(Date, as_date("2009-10-01"), as_date("2019-09-30"))) 
 ```
 
 <br>
@@ -371,7 +377,7 @@ ggplot() +
 
 ```{r}
 CEDEN.WQ.sf$Datum <- "NAD83" # Add datum info
-CEDEN.WQ.sf <- CEDEN.WQ.sf[,c('MatrixName', 'StationCode', 'LocationCode', 'Date', 'Analyte', 'Result', 'Unit', 'MDL', 'CollectionMethod',  'Program', 'ParentProject', 'Project', 'regional_board', 'rb_number', 'Latitude', 'Longitude', 'Datum', 'Subregion', 'geometry')]
+CEDEN.WQ.sf <- CEDEN.WQ.sf[,c('MatrixName', 'StationName', 'StationCode', 'LocationCode', 'Date', 'Analyte', 'Result', 'Unit', 'MDL', 'CollectionMethod',  'Program', 'ParentProject', 'Project', 'regional_board', 'rb_number', 'Latitude', 'Longitude', 'Datum', 'Subregion', 'geometry')]
 
 # WQ.index <- tibble(1:length(names(CEDEN.WQ.sf)), names(CEDEN.WQ.sf)) # tibble to show column names, order, and index number
 
