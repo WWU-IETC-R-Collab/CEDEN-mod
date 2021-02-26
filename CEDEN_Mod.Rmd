@@ -318,8 +318,9 @@ CEDEN WQ data were filtered to exclude qualitative results. This was to ensure o
 ```{r}
 # Load Data
 CEDEN.WQ <- fread("Data/CEDEN_WQ_20212259571.txt", colClasses = c(Result = 'numeric')) %>%
-  filter(!TargetLatitude == 'NULL', (!is.na(as.numeric(Result)))) %>% # remove character NULLs, remove qualitative results
   select(any_of(CEDEN.selectList)) %>%
+  filter(!Latitude == 'NULL', 
+  (!is.na(as.numeric(Result)))) %>% # remove character NULLs, remove qualitative results
   mutate(Latitude = as.numeric(Latitude), Longitude = as.numeric(Longitude))
 ```
 
