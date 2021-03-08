@@ -337,10 +337,39 @@ CEDEN.WQ <- fread("Data/CEDEN_WQ_20212259571.txt",
 
 # Filter out data that does not meet standards for usage
 CEDEN.WQ <- CEDEN.WQ %>% 
-  filter(!Latitude == 'NULL') %>% # Remove records w/o location data
-  filter(!Result == "NR") # Remove those with device failure
+  filter(!Latitude == 'NULL')%>% # Remove records w/o location data
+  filter(ResultQualCode != "NR") # Remove those with device failure
 
-# It looks like there are no NA results in this data... Expected some associated with QualCode ND
+# Translate NA results to 0 if qual code is "ND"
+CEDEN.WQ$Result[CEDEN.WQ$ResultQualCode == "ND"]<- replace_na(CEDEN.WQ$Result[CEDEN.WQ$ResultQualCode == "ND"],0)
+
+CEDEN.WQ$Result[CEDEN.WQ$ResultQualCode == "DNQ"]<- replace_na(CEDEN.WQ$Result[CEDEN.WQ$ResultQualCode == "DNQ"],0)
+
+# Remove other NA results
+CEDEN.WQ <- CEDEN.WQ %>%
+  filter(Result != "NA")
+```
+
+
+```{r, eval = F}
+## Double check: did the code perform as expected? YES
+
+# Check to make sure expected results remain preserved GOOD
+Chk <- CEDEN.WQ %>% 
+  filter(grepl('Nimbus', StationName)) %>%
+  filter(grepl('Acenap', Analyte))%>%
+  select(Date, StationName, Analyte, Result, ResultQualCode,Latitude, Longitude)
+
+Chk[c(1:2,20:21)]
+
+# Check to make sure expected NA results now = "0" GOOD
+Chk <- CEDEN.WQ %>% 
+  filter(grepl('Grizzly', StationName)) %>%
+  filter(grepl('Dolphin', StationName)) %>%
+  filter(grepl('lyphos', Analyte))%>%
+  select(Date, StationName, Analyte, Result, ResultQualCode,Latitude, Longitude)
+
+Chk[1:4]
 ```
 
 <br>
