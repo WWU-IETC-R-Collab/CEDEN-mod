@@ -50,9 +50,19 @@ library(sf)
 USFE.regions <- st_read("Data/RiskRegions_DWSC_Update_9292020.shp") %>%
     st_transform(., "NAD83")
 
-# Create Column Selection List
+# Create Column Selection List: order useful for later tables
 CEDEN.selectList <-
-  c("ID", "Analyte", "Result", "OrganismName", "Project", "ParentProject", "Program", "VariableResult", "MatrixName", "StationName", "StationCode", "LocationCode", "MDL", "RL", "CommonName", "TissueName", "Date"="SampleDate", "Latitude"="TargetLatitude", "Longitude"="TargetLongitude", "CollectionMethod"="CollectionMethodName", "Unit", "Datum", "regional_board", "rb_number", "Phylum", "Class", "Orders", "Family", "Genus", "Species", "Counts", "BAResult")
+  c("ID", "Date"="SampleDate","Analyte", 
+    "Result", "Unit", "ResultQualCode", "MDL", "RL",
+    "MatrixName", "CollectionMethod"="CollectionMethodName",
+    "StationName", "StationCode", "LocationCode",  "CommonName",
+    "Project", "ParentProject", "Program","Agency"="SampleAgency",
+    "regional_board", "rb_number", 
+    "Latitude"="TargetLatitude", "Longitude"="TargetLongitude",
+    "Datum", 
+    "OrganismName", "VariableResult", "TissueName", 
+    "Phylum", "Class", "Orders", "Family", "Genus", "Species",
+    "Counts", "BAResult") 
 ```
 
 <br>
@@ -283,7 +293,8 @@ write_csv(CEDEN.tissue.sf, "Data/Output/CEDENMod_Tissue.csv") # Note: coerces em
 
 ```r
 # Load Data
-CEDEN.toxicity <- fread("Data/CEDEN_Toxicity_202122510221.txt") %>%
+CEDEN.toxicity <- fread("Data/CEDEN_Toxicity_202122510221.txt", 
+                        quote = "") %>%
   select(any_of(CEDEN.selectList))
 ```
 
@@ -308,8 +319,7 @@ CEDEN.toxicity.sf <- st_as_sf(CEDEN.toxicity,
 
 
 ```r
-CEDEN.toxicity.sf$Datum <- "NAD83" # Add datum info
-CEDEN.toxicity.sf <- CEDEN.toxicity.sf[,c('MatrixName', 'StationName', 'StationCode', 'LocationCode', 'Date', 'Analyte', 'Result', 'Unit', 'OrganismName', 'CollectionMethod',  'Program', 'ParentProject', 'Project', 'regional_board', 'rb_number', 'Latitude', 'Longitude', 'Datum', 'Subregion', 'geometry')]
+CEDEN.toxicity.sf$Datum <- "NAD83" # Add datum info (assumption)
 
 # tox.index <- tibble(1:length(names(CEDEN.toxicity.sf)), names(CEDEN.toxicity.sf)) # tibble to show column names, order, and index number
 
@@ -329,10 +339,20 @@ CEDEN WQ data were filtered to exclude qualitative results. This was to ensure o
 
 ```r
 # Load Data
-CEDEN.WQ <- fread("Data/CEDEN_WQ_20212259571.txt", colClasses = c(Result = 'numeric')) %>%
-  filter(!TargetLatitude == 'NULL', (!is.na(as.numeric(Result)))) %>% # remove character NULLs, remove qualitative results
+CEDEN.WQ <- fread("Data/CEDEN_WQ_20212259571.txt", 
+                  colClasses = c(Result = 'numeric'),
+                  quote = "") %>%
   select(any_of(CEDEN.selectList)) %>%
-  mutate(Latitude = as.numeric(Latitude), Longitude = as.numeric(Longitude))
+  mutate(Result = as.numeric(Result)) %>%
+  mutate(Latitude = as.numeric(Latitude), 
+         Longitude = as.numeric(Longitude)) # coerce blanks to NA
+
+# Filter out data that does not meet standards for usage
+CEDEN.WQ <- CEDEN.WQ %>% 
+  filter(!Latitude == 'NULL') %>% # Remove records w/o location data
+  filter(!Result == "NR") # Remove those with device failure
+
+# It looks like there are no NA results in this data... Expected some associated with QualCode ND
 ```
 
 <br>
@@ -362,7 +382,6 @@ ggplot() +
 
 ```r
 CEDEN.WQ.sf$Datum <- "NAD83" # Add datum info
-CEDEN.WQ.sf <- CEDEN.WQ.sf[,c('MatrixName', 'StationName', 'StationCode', 'LocationCode', 'Date', 'Analyte', 'Result', 'Unit', 'MDL', 'RL', 'CollectionMethod',  'Program', 'ParentProject', 'Project', 'regional_board', 'rb_number', 'Latitude', 'Longitude', 'Datum', 'Subregion', 'geometry')]
 
 # WQ.index <- tibble(1:length(names(CEDEN.WQ.sf)), names(CEDEN.WQ.sf)) # tibble to show column names, order, and index number
 
