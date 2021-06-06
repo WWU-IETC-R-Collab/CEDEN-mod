@@ -54,14 +54,17 @@ USFE.regions <- st_read("Data/RiskRegions_DWSC_Update_9292020.shp") %>%
 CEDEN.selectList <-
   c("ID", "Date"="SampleDate","Analyte", 
     "Result", "Unit", "ResultQualCode", "MDL", "RL",
-    "MatrixName", "CollectionMethod"="CollectionMethodName",
-    "StationName", "StationCode", "LocationCode",  "CommonName",
-    "Project", "ParentProject", "Program","Agency"="SampleAgency",
+    "MatrixName", 
+    "CollectionMethod"="CollectionMethodName",
+    "StationName", "StationCode", "LocationCode",
+    "CommonName", "Project", "ParentProject", 
+    "Program","Agency"="SampleAgency",
     "regional_board", "rb_number", 
-    "Latitude"="TargetLatitude", "Longitude"="TargetLongitude",
-    "Datum", 
+    "Latitude"="TargetLatitude", 
+    "Longitude"="TargetLongitude", "Datum", 
     "OrganismName", "VariableResult", "TissueName", 
-    "Phylum", "Class", "Orders", "Family", "Genus", "Species",
+    "Phylum", "Class", "Orders", "Family", 
+    "Genus", "Species",
     "Counts", "BAResult") 
 ```
 
@@ -293,7 +296,8 @@ write_csv(CEDEN.tissue.sf, "Data/Output/CEDENMod_Tissue.csv") # Note: coerces em
 
 ```r
 # Load Data
-CEDEN.toxicity <- fread("Data/CEDEN_Toxicity_202122510221.txt", 
+CEDEN.toxicity <-
+  fread("Data/CEDEN_Toxicity_202122510221.txt",
                         quote = "") %>%
   select(any_of(CEDEN.selectList))
 ```
@@ -306,9 +310,9 @@ CEDEN.toxicity <- fread("Data/CEDEN_Toxicity_202122510221.txt",
 ```r
 # Convert joined habitat tables to sf
 CEDEN.toxicity.sf <- st_as_sf(CEDEN.toxicity,
-                             coords = c("Longitude", "Latitude"), 
-                             remove = F, # Keep original coordinate columns
-                             crs = "NAD83") %>% # Assumed NAD83 Datum, not given in data
+          coords = c("Longitude", "Latitude"), 
+          remove = F, # Keep coordinate columns
+          crs = "NAD83") %>% # Assumed NAD83 Datum, not given in data
   st_join(USFE.regions[1], left = T) %>%
   filter(!is.na(Subregion))
 ```
@@ -349,10 +353,40 @@ CEDEN.WQ <- fread("Data/CEDEN_WQ_20212259571.txt",
 
 # Filter out data that does not meet standards for usage
 CEDEN.WQ <- CEDEN.WQ %>% 
-  filter(!Latitude == 'NULL') %>% # Remove records w/o location data
-  filter(!Result == "NR") # Remove those with device failure
+  filter(!Latitude == 'NULL')%>% # Remove records w/o location data
+  filter(ResultQualCode != "NR") # Remove those with device failure
 
-# It looks like there are no NA results in this data... Expected some associated with QualCode ND
+# Translate NA results to 0 if qual code is "ND"
+CEDEN.WQ$Result[CEDEN.WQ$ResultQualCode == "ND"]<- replace_na(CEDEN.WQ$Result[CEDEN.WQ$ResultQualCode == "ND"],0)
+
+CEDEN.WQ$Result[CEDEN.WQ$ResultQualCode == "DNQ"]<- replace_na(CEDEN.WQ$Result[CEDEN.WQ$ResultQualCode == "DNQ"],0)
+
+# Remove other NA results
+CEDEN.WQ <- CEDEN.WQ %>%
+  filter(Result != "NA")
+```
+
+
+
+```r
+## Double check: did the code perform as expected? YES
+
+# Check to make sure expected results remain preserved GOOD
+Chk <- CEDEN.WQ %>% 
+  filter(grepl('Nimbus', StationName)) %>%
+  filter(grepl('Acenap', Analyte))%>%
+  select(Date, StationName, Analyte, Result, ResultQualCode,Latitude, Longitude)
+
+Chk[c(1:2,20:21)]
+
+# Check to make sure expected NA results now = "0" GOOD
+Chk <- CEDEN.WQ %>% 
+  filter(grepl('Grizzly', StationName)) %>%
+  filter(grepl('Dolphin', StationName)) %>%
+  filter(grepl('lyphos', Analyte))%>%
+  select(Date, StationName, Analyte, Result, ResultQualCode,Latitude, Longitude)
+
+Chk[1:4]
 ```
 
 <br>
@@ -361,11 +395,11 @@ CEDEN.WQ <- CEDEN.WQ %>%
 
 
 ```r
-# Convert joined habitat tables to sf
+# Convert WQ table to sf
 CEDEN.WQ.sf <- st_as_sf(CEDEN.WQ,
-                             coords = c("Longitude", "Latitude"), 
-                             remove = F, # Keep original coordinate columns
-                             crs = "NAD83") %>% # Assumed WGS84 Datum, not given in data
+      coords = c("Longitude", "Latitude"), 
+                remove = F, # Keep coordinate columns
+                crs = "NAD83") %>% # Assumed NAD83 Datum, not given in data
   st_join(USFE.regions[1], left = T) %>%
   filter(!is.na(Subregion))
 
@@ -381,7 +415,7 @@ ggplot() +
 
 
 ```r
-CEDEN.WQ.sf$Datum <- "NAD83" # Add datum info
+CEDEN.WQ.sf$Datum <- "NAD83" # Add datum info (assumed)
 
 # WQ.index <- tibble(1:length(names(CEDEN.WQ.sf)), names(CEDEN.WQ.sf)) # tibble to show column names, order, and index number
 

@@ -55,14 +55,17 @@ USFE.regions <- st_read("Data/RiskRegions_DWSC_Update_9292020.shp") %>%
 CEDEN.selectList <-
   c("ID", "Date"="SampleDate","Analyte", 
     "Result", "Unit", "ResultQualCode", "MDL", "RL",
-    "MatrixName", "CollectionMethod"="CollectionMethodName",
-    "StationName", "StationCode", "LocationCode",  "CommonName",
-    "Project", "ParentProject", "Program","Agency"="SampleAgency",
+    "MatrixName", 
+    "CollectionMethod"="CollectionMethodName",
+    "StationName", "StationCode", "LocationCode",
+    "CommonName", "Project", "ParentProject", 
+    "Program","Agency"="SampleAgency",
     "regional_board", "rb_number", 
-    "Latitude"="TargetLatitude", "Longitude"="TargetLongitude",
-    "Datum", 
+    "Latitude"="TargetLatitude", 
+    "Longitude"="TargetLongitude", "Datum", 
     "OrganismName", "VariableResult", "TissueName", 
-    "Phylum", "Class", "Orders", "Family", "Genus", "Species",
+    "Phylum", "Class", "Orders", "Family", 
+    "Genus", "Species",
     "Counts", "BAResult") 
 ```
 
@@ -284,7 +287,8 @@ write_csv(CEDEN.tissue.sf, "Data/Output/CEDENMod_Tissue.csv") # Note: coerces em
 
 ```{r}
 # Load Data
-CEDEN.toxicity <- fread("Data/CEDEN_Toxicity_202122510221.txt", 
+CEDEN.toxicity <-
+  fread("Data/CEDEN_Toxicity_202122510221.txt",
                         quote = "") %>%
   select(any_of(CEDEN.selectList))
 ```
@@ -296,9 +300,9 @@ CEDEN.toxicity <- fread("Data/CEDEN_Toxicity_202122510221.txt",
 ```{r}
 # Convert joined habitat tables to sf
 CEDEN.toxicity.sf <- st_as_sf(CEDEN.toxicity,
-                             coords = c("Longitude", "Latitude"), 
-                             remove = F, # Keep original coordinate columns
-                             crs = "NAD83") %>% # Assumed NAD83 Datum, not given in data
+          coords = c("Longitude", "Latitude"), 
+          remove = F, # Keep coordinate columns
+          crs = "NAD83") %>% # Assumed NAD83 Datum, not given in data
   st_join(USFE.regions[1], left = T) %>%
   filter(!is.na(Subregion))
 ```
@@ -377,11 +381,11 @@ Chk[1:4]
 #### Spatial Query
 
 ```{r}
-# Convert joined habitat tables to sf
+# Convert WQ table to sf
 CEDEN.WQ.sf <- st_as_sf(CEDEN.WQ,
-                             coords = c("Longitude", "Latitude"), 
-                             remove = F, # Keep original coordinate columns
-                             crs = "NAD83") %>% # Assumed WGS84 Datum, not given in data
+      coords = c("Longitude", "Latitude"), 
+                remove = F, # Keep coordinate columns
+                crs = "NAD83") %>% # Assumed NAD83 Datum, not given in data
   st_join(USFE.regions[1], left = T) %>%
   filter(!is.na(Subregion))
 
@@ -396,7 +400,7 @@ ggplot() +
 #### Final WQ Data
 
 ```{r}
-CEDEN.WQ.sf$Datum <- "NAD83" # Add datum info
+CEDEN.WQ.sf$Datum <- "NAD83" # Add datum info (assumed)
 
 # WQ.index <- tibble(1:length(names(CEDEN.WQ.sf)), names(CEDEN.WQ.sf)) # tibble to show column names, order, and index number
 
@@ -407,9 +411,11 @@ write_csv(CEDEN.WQ.sf, "Data/Output/CEDENMod_WQ.csv") # Note: coerces empty data
 
 ```{r include = F}
 # Author: Steven Eikenbary
+
 #############
 # R code for combining CEDEN and SURF data based on common columns
 #############
+
 # CEDEN <- read.csv("G:/Upper San Francisco Project/Data/CEDEN_SURF_Data/All_CEDEN_w_RegionID.csv") #read in CEDEN data
 # SURF <- read.csv("G:/Upper San Francisco Project/Data/CEDEN_SURF_Data/All_SURF_w_RegionID.csv") #read in SURF
 # CEDEN.subset <- CEDEN[, c("Region", "Analyte", "Result", "MDL", "SampleDate", "TargetLatitude",
