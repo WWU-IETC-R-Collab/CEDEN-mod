@@ -160,8 +160,8 @@ CEDEN.benthic$Datum <- "NAD83" # Direct modification; all datum are now assumed 
 ```{r}
 # Convert joined benthic tables to sf
 CEDEN.benthic.sf <- st_as_sf(CEDEN.benthic) %>%
-  st_join(USFE.regions[1], left = T) %>%
-  filter(!is.na(Subregion))
+  st_join(USFE.regions[8], left = T) %>%
+  filter(!is.na(SUBREGION))
 
 # Map Check
 ggplot() +
