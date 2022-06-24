@@ -52,8 +52,11 @@ library(sf)
 # library(vroom) #switched from vroom to data.table's fread()
 
 # Load NEW Risk Regions
-USFE.regions <-  st_read("Data/subregions/subregions.shp")
+USFE.regions <-  st_read("Data/Subregions/Subregions.shp") %>% 
+  rename(Subregion = SUBREGION)
 st_crs(USFE.regions)
+
+head(USFE.regions)
 
 # Create Column Selection List: order useful for later tables
 CEDEN.selectList <-
@@ -161,12 +164,15 @@ CEDEN.benthic$Datum <- "NAD83" # Direct modification; all datum are now assumed 
 # Convert joined benthic tables to sf
 CEDEN.benthic.sf <- st_as_sf(CEDEN.benthic) %>%
   st_join(USFE.regions[8], left = T) %>%
-  filter(!is.na(SUBREGION))
+  filter(!is.na(Subregion))
 
 # Map Check
 ggplot() +
   geom_sf(data = USFE.regions) +
   geom_sf(data = CEDEN.benthic.sf, color = "orange")
+
+
+head(CEDEN.benthic.sf)
 ```
 
 <br>
@@ -214,7 +220,7 @@ CEDEN.habitat.sf <- st_as_sf(CEDEN.habitat,
                              coords = c("Longitude", "Latitude"), 
                              remove = F, # Keep original coordinate columns
                              crs = "NAD83") %>% # Assumed NAD83 Datum, not given in data
-  st_join(USFE.regions[1], left = T) %>%
+  st_join(USFE.regions[8], left = T) %>%
   filter(!is.na(Subregion))
 
 # Map Check
@@ -264,7 +270,7 @@ CEDEN.tissue.sf <- st_as_sf(CEDEN.tissue,
                              coords = c("Longitude", "Latitude"), 
                              remove = F, # Keep original coordinate columns
                              crs = "NAD83") %>% # Assumed NAD83 Datum, not given in data
-  st_join(USFE.regions[1], left = T) %>%
+  st_join(USFE.regions[8], left = T) %>%
   filter(!is.na(Subregion))
 
 ggplot() +
@@ -307,7 +313,7 @@ CEDEN.toxicity.sf <- st_as_sf(CEDEN.toxicity,
           coords = c("Longitude", "Latitude"), 
           remove = F, # Keep coordinate columns
           crs = "NAD83") %>% # Assumed NAD83 Datum, not given in data
-  st_join(USFE.regions[1], left = T) %>%
+  st_join(USFE.regions[8], left = T) %>%
   filter(!is.na(Subregion))
 ```
 
@@ -390,7 +396,7 @@ CEDEN.WQ.sf <- st_as_sf(CEDEN.WQ,
       coords = c("Longitude", "Latitude"), 
                 remove = F, # Keep coordinate columns
                 crs = "NAD83") %>% # Assumed NAD83 Datum, not given in data
-  st_join(USFE.regions[1], left = T) %>%
+  st_join(USFE.regions[8], left = T) %>%
   filter(!is.na(Subregion))
 
 # Map Check

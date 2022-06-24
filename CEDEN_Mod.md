@@ -11,6 +11,10 @@ output:
 
 
 
+
+
+**THIS BRANCH USES DIFFERENT RISK REGIONS THAN ORIGINAL**
+
 This markdown document covers the modifications of original CEDEN data tables to create a "modified" data set for general use within IETC projects.
 
 The "original" data set consists of all unmodified CEDEN tables (BENTHIC, HABITAT, TISSUE, TOXICITY, WATERQUALITY) from the Central Valley and San Francisco Bay regions and are spatially queried to the USFE project area. All of the original CEDEN tables were downloaded on `2021-02-25` and contain data within our project timeframe `2009-10-01` to `2019-9-30`. This original data set can be found within the IETC Tox Box at:
@@ -46,9 +50,9 @@ library(sf)
 
 # library(vroom) #switched from vroom to data.table's fread()
 
-# Load Risk Regions
-USFE.regions <- st_read("Data/RiskRegions_DWSC_Update_9292020.shp") %>%
-    st_transform(., "NAD83")
+# Load NEW Risk Regions
+USFE.regions <-  st_read("Data/subregions/subregions.shp")
+st_crs(USFE.regions)
 
 # Create Column Selection List: order useful for later tables
 CEDEN.selectList <-
@@ -157,8 +161,8 @@ CEDEN.benthic$Datum <- "NAD83" # Direct modification; all datum are now assumed 
 ```r
 # Convert joined benthic tables to sf
 CEDEN.benthic.sf <- st_as_sf(CEDEN.benthic) %>%
-  st_join(USFE.regions[1], left = T) %>%
-  filter(!is.na(Subregion))
+  st_join(USFE.regions[8], left = T) %>%
+  filter(!is.na(SUBREGION))
 
 # Map Check
 ggplot() +
