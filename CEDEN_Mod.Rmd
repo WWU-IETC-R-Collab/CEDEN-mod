@@ -43,11 +43,14 @@ library(sf)
 # library(vroom) #switched from vroom to data.table's fread()
 
 ## Load risk regions from shp file
-USFE.RiskRegions.NAD <- st_read("Data/USFE_RiskRegions_9292020/RiskRegions_DWSC_Update_9292020.shp")
-st_crs(USFE.RiskRegions.NAD)
+USFE.RiskRegions <- st_read("Data/USFE_RiskRegions_9292020/RiskRegions_DWSC_Update_9292020.shp")
+st_crs(USFE.RiskRegions)
 
   ## Convert from NAD83 to WGS
-  USFE.RiskRegions <- st_transform(USFE.RiskRegions.NAD, "WGS84")
+  USFE.RiskRegions.NAD <- st_transform(USFE.RiskRegions, "NAD83")
+  
+st_crs(USFE.RiskRegions.NAD)
+
   
 st_crs(USFE.RiskRegions)
 
@@ -108,7 +111,7 @@ CEDEN benthic data was used for a separate macroinvertebrate (MI) and water qual
 ```{r}
 # Load Data
 CEDEN.toxicity <-
-  fread("Data/CEDEN/original/CEDEN_TOX_26JUN2022.txt",
+  fread("Data/original/CEDEN_Toxicity_202122510221.txt",
                         quote = "") %>%
   select(any_of(CEDEN.selectList))
 ```
@@ -123,7 +126,7 @@ CEDEN.toxicity.sf <- st_as_sf(CEDEN.toxicity,
           coords = c("Longitude", "Latitude"), 
           remove = F, # Keep coordinate columns
           crs = "NAD83") %>% # Assumed NAD83 Datum, not given in data
-  st_join(USFE.RiskRegions[1], left = T) %>%
+  st_join(USFE.RiskRegions.NAD[1], left = T) %>%
   filter(!is.na(Subregion))
 ```
 
@@ -140,7 +143,7 @@ CEDEN.toxicity.sf <- CEDEN.toxicity.sf %>%
 
 # tox.index <- tibble(1:length(names(CEDEN.toxicity.sf)), names(CEDEN.toxicity.sf)) # tibble to show column names, order, and index number
 
-write_csv(CEDEN.toxicity.sf, "Data/Output/CEDENMod_Toxicity_26JUN2022.csv") # Note: coerces empty data fields to NA
+write_csv(CEDEN.toxicity.sf, "Data/Output/CEDENMod_Toxicity_14SEPT2022.csv") # Note: coerces empty data fields to NA
 ```
 
 <br>
@@ -155,7 +158,7 @@ CEDEN WQ data were filtered to exclude qualitative results. This was to ensure o
 
 ```{r}
 # Load Data
-CEDEN.WQ <- fread("Data/CEDEN/original/CEDEN_WQ_26JUN2022.txt",
+CEDEN.WQ <- fread("Data/original/CEDEN_Toxicity_202122510221.txt",
                   quote = "") %>%
   select(any_of(CEDEN.selectList)) %>%
   mutate(Result = as.numeric(Result)) %>%
@@ -209,12 +212,12 @@ CEDEN.WQ.sf <- st_as_sf(CEDEN.WQ,
       coords = c("Longitude", "Latitude"), 
                 remove = F, # Keep coordinate columns
                 crs = "NAD83") %>% # Assumed NAD83 Datum, not given in data
-  st_join(USFE.RiskRegions[1], left = T) %>%
+  st_join(USFE.RiskRegions.NAD[1], left = T) %>%
   filter(!is.na(Subregion))
 
 # Map Check
 ggplot() +
-  geom_sf(data = UUSFE.RiskRegions) +
+  geom_sf(data = USFE.RiskRegions.NAD) +
   geom_sf(data = CEDEN.WQ.sf, color = "orange")
 ```
 
@@ -231,7 +234,7 @@ CEDEN.WQ.sf <- CEDEN.WQ.sf %>%
 
 # WQ.index <- tibble(1:length(names(CEDEN.WQ.sf)), names(CEDEN.WQ.sf)) # tibble to show column names, order, and index number
 
-write_csv(CEDEN.WQ.sf, "Data/Output/CEDENMod_WQ_26JUN2022.csv") # Note: coerces empty data fields to NA
+write_csv(CEDEN.WQ.sf, "Data/Output/CEDENMod_WQ_14SEPT2022.csv") # Note: coerces empty data fields to NA
 ```
 
 <br>
