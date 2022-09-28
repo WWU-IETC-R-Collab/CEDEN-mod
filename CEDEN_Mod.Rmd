@@ -50,8 +50,6 @@ st_crs(USFE.RiskRegions)
   USFE.RiskRegions.NAD <- st_transform(USFE.RiskRegions, "NAD83")
   
 st_crs(USFE.RiskRegions.NAD)
-
-  
 st_crs(USFE.RiskRegions)
 
 ## Preview Risk Regions
@@ -111,7 +109,7 @@ CEDEN benthic data was used for a separate macroinvertebrate (MI) and water qual
 ```{r}
 # Load Data
 CEDEN.toxicity <-
-  fread("Data/original/CEDEN_Toxicity_202122510221.txt",
+  fread("Data/CEDEN_Toxicity_202122510221.txt",
                         quote = "") %>%
   select(any_of(CEDEN.selectList))
 ```
@@ -158,7 +156,8 @@ CEDEN WQ data were filtered to exclude qualitative results. This was to ensure o
 
 ```{r}
 # Load Data
-CEDEN.WQ <- fread("Data/original/CEDEN_Toxicity_202122510221.txt",
+CEDEN.WQ <- fread("Data/CEDEN_Toxicity_202122510221.txt", 
+                  colClasses = c(Result = 'numeric'),
                   quote = "") %>%
   select(any_of(CEDEN.selectList)) %>%
   mutate(Result = as.numeric(Result)) %>%
@@ -179,30 +178,6 @@ CEDEN.WQ$Result[CEDEN.WQ$ResultQualCode == "DNQ"]<- replace_na(CEDEN.WQ$Result[C
 CEDEN.WQ <- CEDEN.WQ %>%
   filter(Result != "NA")
 ```
-
-
-```{r, eval = F}
-## Double check: did the code perform as expected? YES
-
-# Check to make sure expected results remain preserved GOOD
-Chk <- CEDEN.WQ %>% 
-  filter(grepl('Nimbus', StationName)) %>%
-  filter(grepl('Acenap', Analyte))%>%
-  select(Date, StationName, Analyte, Result, ResultQualCode,Latitude, Longitude)
-
-Chk[c(1:2,20:21)]
-
-# Check to make sure expected NA results now = "0" GOOD
-Chk <- CEDEN.WQ %>% 
-  filter(grepl('Grizzly', StationName)) %>%
-  filter(grepl('Dolphin', StationName)) %>%
-  filter(grepl('lyphos', Analyte))%>%
-  select(Date, StationName, Analyte, Result, ResultQualCode,Latitude, Longitude)
-
-Chk[1:4]
-```
-
-<br>
 
 #### Spatial Query
 
@@ -239,45 +214,56 @@ write_csv(CEDEN.WQ.sf, "Data/Output/CEDENMod_WQ_14SEPT2022.csv") # Note: coerces
 
 <br>
 
-```{r include = F}
-# Author: Steven Eikenbary
+### CHECK OUTPUT
 
-#############
-# R code for combining CEDEN and SURF data based on common columns
-#############
+Earlier run resulted in failed expansion of timeframe, and fewer WQ samples total. How did this do?
 
-# CEDEN <- read.csv("G:/Upper San Francisco Project/Data/CEDEN_SURF_Data/All_CEDEN_w_RegionID.csv") #read in CEDEN data
-# SURF <- read.csv("G:/Upper San Francisco Project/Data/CEDEN_SURF_Data/All_SURF_w_RegionID.csv") #read in SURF
-# CEDEN.subset <- CEDEN[, c("Region", "Analyte", "Result", "MDL", "SampleDate", "TargetLatitude",
-                          # "TargetLongitude", "CollectionMethodName", "Unit")] #subset CEDEN columns that exist as synonyms within  CEDEN
+```{r, warning = F, message = F}
 
-new.col.names <- c("Region", "Analyte", "Result", "MDL", "Date", "Latitude", "Longitude",
-                   "CollectionMethod", "Unit", "Source") #create vector of new column names for combined CEDEN-SURF dataset
+# Load Old Data
 
-CEDEN.colnames <- colnames(CEDEN.subset) #rename CEDEN subset column names, not sure if this is a necessary step
+tmp <- tempfile()
 
-CEDEN.subset["Source"] <- "CEDEN" #add data source "CEDEN"
+Tox <- gh("https://raw.githubusercontent.com/WWU-IETC-R-Collab/CEDEN-mod/main/Data/Output/CEDENMod_Toxicity.csv",
+                 .token = gh_token(),
+                 .destfile = tmp)
+  
+Tox.old <- read_csv(tmp) 
 
-CEDEN.subset$SampleDate <- as.Date(CEDEN$SampleDate, format = "%m/%d/%Y") #format CEDEN date column
+rm(tmp) #Clean up to avoid overwrite issues
 
-names(CEDEN)[names(CEDEN)=="SampleDate"] <- "Date" #Change coulmn name to "Date"
+tmp <- tempfile()
 
-names(SURF)[names(SURF)=="Sample_date"] <- "Date" #Change coulmn name to "Date"
+WQ <- gh("https://raw.githubusercontent.com/WWU-IETC-R-Collab/CEDEN-mod/main/Data/Output/CEDENMod_WQ.csv",
+                 .token = gh_token(),
+                 .destfile = tmp)
+  
+WQ.old <- read_csv(tmp) 
 
-colnames(CEDEN.subset) <- new.col.names #give CEDEN subset new colnames
-colnames(SURF.subset) <- new.col.names #give SURF subset new colnames
-CEDEN_SURF_comb <- rbind(CEDEN.subset, SURF.subset) #combine CEDEN and SURF subsets
+rm(tmp) #Clean up to avoid overwrite issues
+```
 
-### SURF
+```{r}
+# Compare toxicity output
+nrow(Tox.old)
+nrow(CEDEN.toxicity.sf)
 
-SURF.subset <- SURF[, c("Region", "Chemical_name", "Concentration__ppb_", "Method_detection_level__ppb_",
-                        "Sample_date", "Latitude", "Longitude", "Sample_type")] #subset SURF columns that exist as synonyms within
-SURF.subset["Unit"] <- "ug/L" #add column "Unit" to SURF. SURF data is ppb; ug/L is a close approximation based on USGS protocols
+min(as.Date(Tox.old$Date))
+min(as.Date(CEDEN.toxicity.sf$Date))
 
-SURF.subset["Source"] <- "SURF" #add data source "SURF'
+max(as.Date(Tox.old$Date)) 
+max(as.Date(CEDEN.toxicity.sf$Date)) 
+```
 
-SURF.subset$Sample_date <- as.Date(SURF$Sample_date, format = "%d-%b-%y") #format SURF date column
+```{r}
+# Compare WQ output
+nrow(WQ.old)
+nrow(CEDEN.WQ.sf)
 
-SURF.colnames <- colnames(SURF.subset) #rename SURF subset column names, not sure if this is a necessary step
+min(as.Date(WQ.old$Date)) 
+min(as.Date(CEDEN.WQ.sf$Date)) 
+
+max(as.Date(WQ.old$Date)) 
+max(as.Date(CEDEN.WQ.sf$Date))
 ```
 
