@@ -111,7 +111,7 @@ CEDEN benthic data was used for a separate macroinvertebrate (MI) and water qual
 ```{r}
 # Load Data
 CEDEN.toxicity <-
-  fread("Data/CEDEN_Toxicity_202122510221.txt",
+  fread("Data/CEDEN_TOX_26JUN2022.txt",
                         quote = "") %>%
   select(any_of(CEDEN.selectList))
 ```
@@ -158,7 +158,7 @@ CEDEN WQ data were filtered to exclude qualitative results. This was to ensure o
 
 ```{r}
 # Load Data
-CEDEN.WQ <- fread("Data/CEDEN_Toxicity_202122510221.txt", 
+CEDEN.WQ <- fread("Data/CEDEN_WQ_26JUN2022.txt", 
                   colClasses = c(Result = 'numeric'),
                   quote = "") %>%
   select(any_of(CEDEN.selectList)) %>%
